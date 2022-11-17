@@ -71,7 +71,14 @@ def plot_one_box_tracked(x, img, color=None, label=None, line_thickness=6):
     # Plots one bounding box on image img
     tl = line_thickness
     # tl = line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1  # line/font thickness
-    color = [32*x.track_id, 44*x.track_id, 17*x.track_id]
+    # color = [x * y % 255 for x, y in zip([30, 20, 10], [x.track_id, x.track_id, x.track_id])]
+    # color = [150*x.track_id % 255, 100*x.track_id % 255, x.track_id % 255]
+    R = 255 // x.track_id
+    B = 255 - R
+    G = (255 + x.track_id * B) % 255
+    
+    color = [R, G, B]
+
     c1, c2 = (int(x.tlbr[0]), int(x.tlbr[1])), (int(x.tlbr[2]), int(x.tlbr[3]))
     cv2.rectangle(img, c1, c2, color, thickness=20, lineType=cv2.LINE_AA)
     cv2.putText(img, str(x.track_id) , (int((c1[0]+c2[0])/2), int((c1[1]+c2[1])/2)), cv2.FONT_HERSHEY_SIMPLEX, 3, (0,255,0), 2)
