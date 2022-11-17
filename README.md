@@ -2,11 +2,11 @@
 
 	sudo apt update -y
 
-	https://github.com/inbn6619/yolov7.git
+	git clone https://github.com/inbn6619/yolov7.git
 
 	cd yolov7
 
-	https://github.com/inbn6619/ByteTrack.git
+	git clone https://github.com/inbn6619/ByteTrack.git
 
 	cd ByteTrack
 
