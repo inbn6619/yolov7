@@ -9,6 +9,8 @@
 	git clone https://github.com/inbn6619/ByteTrack.git
 
 	cd ByteTrack
+	
+	sudo apt install python3-pip -y
 
 	sudo pip3 install -r requirements.txt
 
