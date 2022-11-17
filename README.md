@@ -1,28 +1,27 @@
-EC2 env
+// EC2 env
 
-sudo apt update -y
+	sudo apt update -y
 
-https://github.com/inbn6619/yolov7.git
+	https://github.com/inbn6619/yolov7.git
 
-cd yolov7
+	cd yolov7
 
-https://github.com/inbn6619/ByteTrack.git
+	https://github.com/inbn6619/ByteTrack.git
 
-cd ByteTrack
+	cd ByteTrack
 
-sudo pip3 install -r requirements.txt
+	sudo pip3 install -r requirements.txt
 
-sudo python3 setup.py develop
+	sudo python3 setup.py develop
 
-sudo pip3 install cython; pip3 install 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
+	sudo pip3 install cython; pip3 install 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
 
-sudo pip3 install cython_bbox
+	sudo pip3 install cython_bbox
 
-sudo pip3 install seaborn
+	sudo pip3 install seaborn
 
-sudo apt-get update
-sudo apt-get -y install libgl1-mesa-glx
-
+	sudo apt-get update
+	sudo apt-get -y install libgl1-mesa-glx
 
 
 
@@ -40,6 +39,7 @@ sudo apt-get -y install libgl1-mesa-glx
 
 
 // cv2 Error Check
+
 	version check
 		python3
 			import cv2
@@ -47,16 +47,17 @@ sudo apt-get -y install libgl1-mesa-glx
 			print(cv2.__version__) // 버전확인
 
 // cv2 Error Fix
+
+
 	sudo apt-get update
 	sudo apt-get -y install libgl1-mesa-glx
-
 	or
-
 	sudo pip3 install opencv-python-headless
 
 
 
 // torch Error Check
+
 	version check
 		python3
 			import torch
