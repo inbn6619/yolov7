@@ -73,15 +73,20 @@ def plot_one_box_tracked(x, img, color=None, label=None, line_thickness=6):
     # tl = line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1  # line/font thickness
     # color = [x * y % 255 for x, y in zip([30, 20, 10], [x.track_id, x.track_id, x.track_id])]
     # color = [150*x.track_id % 255, 100*x.track_id % 255, x.track_id % 255]
-    R = 255 // x.track_id
-    B = 255 - R
-    G = (255 + x.track_id * B) % 255
+    # R = 255 // x.track_id
+    # B = abs(255 - R * x.track_id)0
+    # G = (255 + x.track_id * B) % 255
     
-    color = [R, G, B]
+    # color = [R, G, B]
+
+
+    # c1, c2 = (x.tlbr[0], x.tlbr[1]), (x.tlbr[2], x.tlbr[3])
+
 
     c1, c2 = (int(x.tlbr[0]), int(x.tlbr[1])), (int(x.tlbr[2]), int(x.tlbr[3]))
     cv2.rectangle(img, c1, c2, color, thickness=20, lineType=cv2.LINE_AA)
-    cv2.putText(img, str(x.track_id) , (int((c1[0]+c2[0])/2), int((c1[1]+c2[1])/2)), cv2.FONT_HERSHEY_SIMPLEX, 3, (0,255,0), 2)
+    cv2.putText(img, str(x.track_id) , (((c1[0]+c2[0])//2), ((c1[1]+c2[1])//2)), cv2.FONT_HERSHEY_SIMPLEX, 3, color, 4)
+
     # if label:
     #     tf = max(tl - 1, 1)  # font thickness
     #     t_size = cv2.getTextSize(label, 0, fontScale=tl / 3, thickness=tf)[0]

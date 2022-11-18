@@ -62,8 +62,10 @@ def detect(save_img=False):
         dataset = LoadImages(source, img_size=imgsz, stride=stride)
 
     # Get names and colors
-    names = model.module.names if hasattr(model, 'module') else model.names
-    colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
+    # names = model.module.names if hasattr(model, 'module') else model.names
+    random.seed(123)
+    colors = [[random.randint(0, 255) for _ in range(3)] for _ in range(100)]
+    # print(colors)
 
     # Run inference
     if device.type != 'cpu':
@@ -122,8 +124,11 @@ def detect(save_img=False):
                 tracked_targets = tracker.update(det[:, :5].cpu().numpy(), im0.shape)
 
                 ## Overlay
-                for bbox in tracked_targets:
-                    plot_one_box_tracked(bbox, im0)
+                # for bbox in tracked_targets:
+                #     plot_one_box_tracked(bbox, im0)
+
+                for num in range(len(tracked_targets)):
+                    plot_one_box_tracked(tracked_targets[num], im0, color=colors[tracked_targets[num].track_id])
 
                 # # Print results
                 # for c in det[:, -1].unique():
@@ -181,7 +186,7 @@ def detect(save_img=False):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='/home/ubuntu/yolov7/yolov7_p5_ver01.best.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='/home/ubuntu/yolov7/cowfarmB_ch2_2022072519_010_1M.mp4', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--source', type=str, default='/home/ubuntu/yolov7/cowfarmB_ch3_2022072519_016.mp4', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
