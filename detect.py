@@ -7,6 +7,7 @@ import torch
 import torch.backends.cudnn as cudnn
 from numpy import random
 
+
 from models.experimental import attempt_load
 from utils.datasets import LoadStreams, LoadImages
 from utils.general import check_img_size, check_requirements, check_imshow, non_max_suppression, apply_classifier, \
@@ -14,13 +15,20 @@ from utils.general import check_img_size, check_requirements, check_imshow, non_
 from utils.plots import plot_one_box, plot_one_box_tracked
 from utils.torch_utils import select_device, load_classifier, time_synchronized, TracedModel
 from ByteTrack.yolox.tracker.byte_tracker import BYTETracker
+import pandas as pd
+
 
 
 def detect(save_img=False):
+    
+    
+
+
+    test = pd.DataFrame()
 
     # fps 동영상에서 찾아서 불러오기
     tracker = BYTETracker(opt, frame_rate=15)
-
+    
     source, weights, view_img, save_txt, imgsz, trace = opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size, not opt.no_trace
     save_img = not opt.nosave and not source.endswith('.txt')  # save inference images
     webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
@@ -63,8 +71,12 @@ def detect(save_img=False):
 
     # Get names and colors
     names = model.module.names if hasattr(model, 'module') else model.names
-    colors = [[random.randint(0, 255) for _ in range(3)] for _ in names]
+    # random.seed(123)
+    # colors = [[random.randint(0, 255) for _ in range(3)] for _ in range(100)]
+    # print(colors)
+    colors = [[000, 255, 102],  [51, 255, 51], [000, 000, 255], [255, 255, 51], [204, 000, 000], [51, 51, 204], [51, 51, 255], [255, 255, 000], [255, 000, 255], [255, 000, 000], [102, 255, 000], [000, 255, 204], [204, 000, 51], [255, 000, 153], [255, 51, 102], [102, 204, 255], [153, 255, 000], [000, 204, 255], [255, 204, 000], [255, 51, 000], [255, 102, 000], [000, 255, 255], [102, 000, 255], [000, 153, 255], [255, 204, 000], [255, 000, 102], [204, 255, 000], [255, 102, 153], [51, 255, 000], [51, 255, 204], [153, 000, 204], [204, 51, 255], [255, 51, 153], [102, 255, 204], [102, 255, 153], [102, 000, 204], [204, 255, 255], [102, 255, 255], [204, 000, 204], [000, 255, 102], ]
 
+    # save_name = str(weights).replace('pt', 'csv')
     # Run inference
     if device.type != 'cpu':
         model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
@@ -103,6 +115,7 @@ def detect(save_img=False):
         if classify:
             pred = apply_classifier(pred, modelc, img, im0s)
 
+        
         # Process detections
         for i, det in enumerate(pred):  # detections per image
             if webcam:  # batch_size >= 1
@@ -122,26 +135,63 @@ def detect(save_img=False):
                 tracked_targets = tracker.update(det[:, :5].cpu().numpy(), im0.shape)
 
                 ## Overlay
-                for bbox in tracked_targets:
-                    plot_one_box_tracked(bbox, im0)
+                # for bbox in tracked_targets:
+                #     plot_one_box_tracked(bbox, im0)
+                
+
+                for num in range(len(tracked_targets)):
+                    plot_one_box_tracked(tracked_targets[num], im0, color=colors[tracked_targets[num].track_id % len(colors)])
+                    data = [
+                        tracked_targets[num].end_frame, 
+                        tracked_targets[num].frame_id, 
+                        list(tracked_targets[num].mean), 
+                        tracked_targets[num].score, 
+                        tracked_targets[num].start_frame, 
+                        tracked_targets[num].state, 
+                        list(tracked_targets[num].tlbr), 
+                        list(tracked_targets[num].tlwh), 
+                        tracked_targets[num].track_id, 
+                        tracked_targets[num].tracklet_len, 
+                        tracked_targets[num]._count
+                        ]
+
+                    columns = [
+                        'end_frame',
+                        'frame_id',
+                        'mean',
+                        'score',
+                        'start_frame',
+                        'state',
+                        'tlbr',
+                        'tlwh',
+                        'track_id',
+                        'tracklet_len',
+                        '_count'
+                        ]
+
+                    df = pd.DataFrame([data], columns=columns).set_index('frame_id')
+                    test = pd.concat([test, df])
+                    # print(tracked_targets[num])
+
 
                 # # Print results
                 # for c in det[:, -1].unique():
                 #     n = (det[:, -1] == c).sum()  # detections per class
                 #     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
-                # # Write results
+                # Write results
                 # for *xyxy, conf, cls in reversed(det):
                 #     if save_txt:  # Write to file
                 #         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                 #         line = (cls, *xywh, conf) if opt.save_conf else (cls, *xywh)  # label format
                 #         with open(txt_path + '.txt', 'a') as f:
                 #             f.write(('%g ' * len(line)).rstrip() % line + '\n')
-
-                #     if save_img or view_img:  # Add bbox to image
-                #         label = f'{names[int(cls)]} {conf:.2f}'
-                #         # 박스 치는 곳
-                #         plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=1)
+                # print(weights)
+                # print(save_name)
+                    # if save_img or view_img:  # Add bbox to image
+                    #     label = f'{names[int(cls)]} {conf:.2f}'
+                    #     # 박스 치는 곳
+                    #     plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=1)
 
             # Print time (inference + NMS)
             print(f'{s}Done. ({(1E3 * (t2 - t1)):.1f}ms) Inference, ({(1E3 * (t3 - t2)):.1f}ms) NMS')
@@ -177,15 +227,21 @@ def detect(save_img=False):
 
     print(f'Done. ({time.time() - t0:.3f}s)')
 
+    test.to_csv('yolov7_p6_ver01' + '.csv', index = True)
+    
+
+
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default='/root/cow/yolov7/runs/train/yolov7p5ver015/weights/best.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='/root/cow/yolov7/cowfarmB_ch2_2022072519_010_1min.mp4', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--weights', nargs='+', type=str, default='/root/cow/yolov7/weights/yolov7_p6_ver01.pt', help='model.pt path(s)')
+    parser.add_argument('--source', type=str, default='/root/cow/yolov7/videos/cowfarmB_ch3_2022072519_016.mp4', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
-    parser.add_argument('--device', default='0', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--device', default='0,1', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--view-img', action='store_true', help='display results')
     parser.add_argument('--save-txt', action='store_true', default=True, help='save results to *.txt')
     parser.add_argument('--save-conf', action='store_true', help='save confidences in --save-txt labels')
