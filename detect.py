@@ -142,20 +142,23 @@ def detect(save_img=False):
                 for num in range(len(tracked_targets)):
                     plot_one_box_tracked(tracked_targets[num], im0, color=colors[tracked_targets[num].track_id % len(colors)])
                     data = [
+                        frame,
                         tracked_targets[num].end_frame, 
                         tracked_targets[num].frame_id, 
                         list(tracked_targets[num].mean), 
-                        tracked_targets[num].score, 
+                        round(tracked_targets[num].score, 3), 
                         tracked_targets[num].start_frame, 
                         tracked_targets[num].state, 
-                        list(tracked_targets[num].tlbr), 
-                        list(tracked_targets[num].tlwh), 
+                        list(map(int, tracked_targets[num].tlbr)), 
+                        list(map(int, tracked_targets[num].tlwh)), 
                         tracked_targets[num].track_id, 
                         tracked_targets[num].tracklet_len, 
-                        tracked_targets[num]._count
+                        tracked_targets[num]._count,
+                        len(tracked_targets)
                         ]
 
                     columns = [
+                        'frame',
                         'end_frame',
                         'frame_id',
                         'mean',
@@ -166,12 +169,48 @@ def detect(save_img=False):
                         'tlwh',
                         'track_id',
                         'tracklet_len',
-                        '_count'
+                        '_count',
+                        'len'
                         ]
 
-                    df = pd.DataFrame([data], columns=columns).set_index('frame_id')
+                    df = pd.DataFrame([data], columns=columns).set_index('frame')
                     test = pd.concat([test, df])
                     # print(tracked_targets[num])
+            else:
+                data = [
+                        frame,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None
+                        ]
+
+                columns = [
+                        'frame',
+                        'end_frame',
+                        'frame_id',
+                        'mean',
+                        'score',
+                        'start_frame',
+                        'state',
+                        'tlbr',
+                        'tlwh',
+                        'track_id',
+                        'tracklet_len',
+                        '_count',
+                        'len'
+                        ]
+
+                df = pd.DataFrame([data], columns=columns).set_index('frame')
+                test = pd.concat([test, df])
 
 
                 # # Print results
