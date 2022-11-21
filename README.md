@@ -1,6 +1,8 @@
 // EC2 env
 
 	sudo apt update -y
+	
+	sudo apt install python3-pip
 
 	git clone https://github.com/inbn6619/yolov7.git
 
