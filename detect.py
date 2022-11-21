@@ -6,6 +6,7 @@ import cv2
 import torch
 import torch.backends.cudnn as cudnn
 from numpy import random
+import numpy as np
 
 
 from models.experimental import attempt_load
@@ -15,14 +16,19 @@ from utils.general import check_img_size, check_requirements, check_imshow, non_
 from utils.plots import plot_one_box, plot_one_box_tracked
 from utils.torch_utils import select_device, load_classifier, time_synchronized, TracedModel
 from ByteTrack.yolox.tracker.byte_tracker import BYTETracker
+from shapely.geometry import Point, Polygon
 import pandas as pd
 
 
 
 def detect(save_img=False):
     
-    
-
+    meal_amount = False
+    water_intake = False
+    mealarea = [(61, 816), (22, 690), (908, 739), (913, 897)]
+    waterarea = [(493, 277), (485, 223), (1386, 225), (1384, 277)]
+    mealarea_poly = Polygon(mealarea)
+    waterarea_poly = Polygon(waterarea)
 
     test = pd.DataFrame()
 
@@ -140,7 +146,42 @@ def detect(save_img=False):
                 
 
                 for num in range(len(tracked_targets)):
+
+                    ### amount_of_activity
+                    tlbr = list(map(int, tracked_targets[num].tlbr))
+                    center = np.array([tlbr[0] + (tlbr[2] - tlbr[0]) // 2, tlbr[1] + (tlbr[3] - tlbr[1]) // 2])
+                    past_tlbr = test['tlbr'].iloc[-1]
+                    if past_tlbr:
+                        past_center = np.array([past_tlbr[0] + (past_tlbr[2] - past_tlbr[0]) // 2, past_tlbr[1] + (past_tlbr[3] - past_tlbr[1]) // 2])
+                        amount_of_activity = list(center - past_center)
+                    else:
+                        amount_of_activity = None
+
+                    if amount_of_activity == None:
+                        pass
+                    else:
+                        if not amount_of_activity[0] > 20 and amount_of_activity[1] > 20:
+                            amount_of_activity = [0, 0]
+
+
+                    ### meal_amount
+                    dot = Point(center)
+                    if dot.within(mealarea_poly):
+                        meal_amount = True
+                    else:
+                        meal_amount = False
+
+
+                    ### water_amount
+                    if dot.within(waterarea_poly):
+                        water_intake = True
+                    else:
+                        water_intake = False
+
+
+                    
                     plot_one_box_tracked(tracked_targets[num], im0, color=colors[tracked_targets[num].track_id % len(colors)])
+                    
                     data = [
                         frame,
                         tracked_targets[num].end_frame, 
@@ -154,7 +195,10 @@ def detect(save_img=False):
                         tracked_targets[num].track_id, 
                         tracked_targets[num].tracklet_len, 
                         tracked_targets[num]._count,
-                        len(tracked_targets)
+                        len(tracked_targets),
+                        amount_of_activity,
+                        meal_amount,
+                        water_intake,
                         ]
 
                     columns = [
@@ -170,11 +214,15 @@ def detect(save_img=False):
                         'track_id',
                         'tracklet_len',
                         '_count',
-                        'len'
+                        'len',
+                        'amount_of_activity',
+                        'meal_amount',
+                        'water_intake',
                         ]
 
                     df = pd.DataFrame([data], columns=columns).set_index('frame')
                     test = pd.concat([test, df])
+
                     # print(tracked_targets[num])
             else:
                 data = [
@@ -190,24 +238,30 @@ def detect(save_img=False):
                         None,
                         None,
                         None,
+                        None,
+                        None,
+                        None,
                         None
                         ]
 
                 columns = [
-                        'frame',
-                        'end_frame',
-                        'frame_id',
-                        'mean',
-                        'score',
-                        'start_frame',
-                        'state',
-                        'tlbr',
-                        'tlwh',
-                        'track_id',
-                        'tracklet_len',
-                        '_count',
-                        'len'
-                        ]
+                    'frame',
+                    'end_frame',
+                    'frame_id',
+                    'mean',
+                    'score',
+                    'start_frame',
+                    'state',
+                    'tlbr',
+                    'tlwh',
+                    'track_id',
+                    'tracklet_len',
+                    '_count',
+                    'len',
+                    'amount_of_activity',
+                    'meal_amount',
+                    'water_intake',
+                    ]
 
                 df = pd.DataFrame([data], columns=columns).set_index('frame')
                 test = pd.concat([test, df])
@@ -266,7 +320,7 @@ def detect(save_img=False):
 
     print(f'Done. ({time.time() - t0:.3f}s)')
 
-    test.to_csv('yolov7_p6_ver01' + '.csv', index = True)
+    test.to_csv('p6_e6e_test' + '.csv', index = True)
     
 
 
@@ -275,7 +329,7 @@ def detect(save_img=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default='/home/ubuntu/yolov7/yolov7_p5_tiny_ver01.pt', help='model.pt path(s)')
+    parser.add_argument('--weights', nargs='+', type=str, default='/home/ubuntu/yolov7/yolov7_p6_e6e_ver01.pt', help='model.pt path(s)')
     parser.add_argument('--source', type=str, default='/home/ubuntu/yolov7/cowfarmB_ch3_2022072519_016.mp4', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
