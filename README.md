@@ -33,7 +33,9 @@
 	sudo apt-get update
 	sudo apt-get -y install libgl1-mesa-glx
 
+// 추가 라이브러리
 
+	sudo pip3 install shapely
 
 
 
