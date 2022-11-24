@@ -20,10 +20,12 @@ from scipy.signal import butter, filtfilt
 
 from utils.general import xywh2xyxy, xyxy2xywh
 from utils.metrics import fitness
+from utils.PixelMapper import pm1
 
 # Settings
 matplotlib.rc('font', **{'size': 11})
 matplotlib.use('Agg')  # for writing to files only
+
 
 
 def color_list():
@@ -67,9 +69,9 @@ def plot_one_box(x, img, color=None, label=None, line_thickness=3):
         cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)  # filled
         cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
 
-def plot_one_box_tracked(x, img, color=None, label=None, line_thickness=6):
+def plot_one_box_tracked(x, img, minimap, color=None, label=None, line_thickness=3):
     # Plots one bounding box on image img
-    tl = line_thickness
+    # tl = line_thickness
     # tl = line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1  # line/font thickness
     # color = [x * y % 255 for x, y in zip([30, 20, 10], [x.track_id, x.track_id, x.track_id])]
     # color = [150*x.track_id % 255, 100*x.track_id % 255, x.track_id % 255]
@@ -79,11 +81,31 @@ def plot_one_box_tracked(x, img, color=None, label=None, line_thickness=6):
     
     # color = [R, G, B]
 
+    
 
     # c1, c2 = (x.tlbr[0], x.tlbr[1]), (x.tlbr[2], x.tlbr[3])
 
 
     c1, c2 = (int(x.tlbr[0]), int(x.tlbr[1])), (int(x.tlbr[2]), int(x.tlbr[3]))
+
+    
+
+
+    map_corr = list()
+
+    for xm, ym, xM, yM in np.array([c1 + c2]):
+        xc = xm + (xM - xm) // 2
+        yc = ym + (yM - ym) // 2
+
+        map_corr.append(pm1.pixel_to_lonlat((xc, yc)))
+
+    for corr in map_corr:
+        corr1, corr2 = corr[0]
+        corr1 = int(corr1)
+        corr2 = int(corr2)
+        # print(corr1, corr2)
+        cv2.line(minimap, (corr1, corr2), (corr1, corr2), (0, 0, 255), 50)
+
     cv2.rectangle(img, c1, c2, color, thickness=20, lineType=cv2.LINE_AA)
     cv2.putText(img, str(x.track_id) , (((c1[0]+c2[0])//2), ((c1[1]+c2[1])//2)), cv2.FONT_HERSHEY_SIMPLEX, 3, color, 4)
 

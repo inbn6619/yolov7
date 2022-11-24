@@ -7,6 +7,7 @@ import torch
 import torch.backends.cudnn as cudnn
 from numpy import random
 import numpy as np
+import math
 
 
 from models.experimental import attempt_load
@@ -18,6 +19,8 @@ from utils.torch_utils import select_device, load_classifier, time_synchronized,
 from ByteTrack.yolox.tracker.byte_tracker import BYTETracker
 from shapely.geometry import Point, Polygon
 import pandas as pd
+from utils.VariableGroup import *
+from ByteTrack.yolox.tracker.Points_in_polygon  import mealarea_poly, waterarea_poly
 
 
 
@@ -25,10 +28,7 @@ def detect(save_img=False):
     
     meal_amount = False
     water_intake = False
-    mealarea = [(61, 816), (22, 690), (908, 739), (913, 897)]
-    waterarea = [(493, 277), (485, 223), (1386, 225), (1384, 277)]
-    mealarea_poly = Polygon(mealarea)
-    waterarea_poly = Polygon(waterarea)
+
 
     test = pd.DataFrame()
 
@@ -80,7 +80,7 @@ def detect(save_img=False):
     # random.seed(123)
     # colors = [[random.randint(0, 255) for _ in range(3)] for _ in range(100)]
     # print(colors)
-    colors = [[000, 255, 102],  [51, 255, 51], [000, 000, 255], [255, 255, 51], [204, 000, 000], [51, 51, 204], [51, 51, 255], [255, 255, 000], [255, 000, 255], [255, 000, 000], [102, 255, 000], [000, 255, 204], [204, 000, 51], [255, 000, 153], [255, 51, 102], [102, 204, 255], [153, 255, 000], [000, 204, 255], [255, 204, 000], [255, 51, 000], [255, 102, 000], [000, 255, 255], [102, 000, 255], [000, 153, 255], [255, 204, 000], [255, 000, 102], [204, 255, 000], [255, 102, 153], [51, 255, 000], [51, 255, 204], [153, 000, 204], [204, 51, 255], [255, 51, 153], [102, 255, 204], [102, 255, 153], [102, 000, 204], [204, 255, 255], [102, 255, 255], [204, 000, 204], [000, 255, 102], ]
+
 
     # save_name = str(weights).replace('pt', 'csv')
     # Run inference
@@ -132,7 +132,11 @@ def detect(save_img=False):
             p = Path(p)  # to Path
             save_path = str(save_dir / p.name)  # img.jpg
             txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
+            # map_path = str(save_dir / (p.stem + '_minimap.mp4'))
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
+
+            canvas = np.zeros((720, 1280, 3), dtype="uint8") + 255
+
             if len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
@@ -147,22 +151,21 @@ def detect(save_img=False):
 
                 for num in range(len(tracked_targets)):
 
-                    ### amount_of_activity
+                    ### travel_distance
                     tlbr = list(map(int, tracked_targets[num].tlbr))
                     center = np.array([tlbr[0] + (tlbr[2] - tlbr[0]) // 2, tlbr[1] + (tlbr[3] - tlbr[1]) // 2])
                     past_tlbr = test['tlbr'].iloc[-1]
                     if past_tlbr:
                         past_center = np.array([past_tlbr[0] + (past_tlbr[2] - past_tlbr[0]) // 2, past_tlbr[1] + (past_tlbr[3] - past_tlbr[1]) // 2])
-                        amount_of_activity = list(center - past_center)
+                        travel_distance = math.sqrt(list(center - past_center)[0] * list(center - past_center)[0] + list(center - past_center)[1] * list(center - past_center)[1])
                     else:
-                        amount_of_activity = None
+                        travel_distance = None
 
-                    if amount_of_activity == None:
+                    if travel_distance == None:
                         pass
                     else:
-                        if not amount_of_activity[0] > 20 and amount_of_activity[1] > 20:
-                            amount_of_activity = [0, 0]
-
+                        if travel_distance <= 50:
+                            travel_distance = 0
 
                     ### meal_amount
                     dot = Point(center)
@@ -180,7 +183,7 @@ def detect(save_img=False):
 
 
                     
-                    plot_one_box_tracked(tracked_targets[num], im0, color=colors[tracked_targets[num].track_id % len(colors)])
+                    plot_one_box_tracked(tracked_targets[num], im0, canvas, color=colors[tracked_targets[num].track_id % len(colors)])
                     
                     data = [
                         frame,
@@ -196,7 +199,7 @@ def detect(save_img=False):
                         tracked_targets[num].tracklet_len, 
                         tracked_targets[num]._count,
                         len(tracked_targets),
-                        amount_of_activity,
+                        travel_distance,
                         meal_amount,
                         water_intake,
                         ]
@@ -215,7 +218,7 @@ def detect(save_img=False):
                         'tracklet_len',
                         '_count',
                         'len',
-                        'amount_of_activity',
+                        'travel_distance',
                         'meal_amount',
                         'water_intake',
                         ]
@@ -258,7 +261,7 @@ def detect(save_img=False):
                     'tracklet_len',
                     '_count',
                     'len',
-                    'amount_of_activity',
+                    'travel_distance',
                     'meal_amount',
                     'water_intake',
                     ]
@@ -312,7 +315,9 @@ def detect(save_img=False):
                             fps, w, h = 30, im0.shape[1], im0.shape[0]
                             save_path += '.mp4'
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+                        # map_writer = cv2.VideoWriter(map_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer.write(im0)
+                    # map_writer.write(canvas)
 
     if save_txt or save_img:
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
@@ -329,8 +334,8 @@ def detect(save_img=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default='/home/ubuntu/yolov7/yolov7_p6_e6e_ver01.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='/home/ubuntu/yolov7/cowfarmB_ch3_2022072519_016.mp4', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--weights', nargs='+', type=str, default='/home/ubuntu/yolov7/yolov7_p5_tiny_ver01.pt', help='model.pt path(s)')
+    parser.add_argument('--source', type=str, default='/home/ubuntu/yolov7/sample_ch3_not_rtsp.mp4', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
