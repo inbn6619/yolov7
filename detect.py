@@ -21,15 +21,37 @@ from shapely.geometry import Point, Polygon
 import pandas as pd
 from utils.VariableGroup import *
 from ByteTrack.yolox.tracker.Points_in_polygon  import mealarea_poly, waterarea_poly
+from datetime import datetime
+from utils.PixelMapper import pm1
+from collections import deque
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 def detect(save_img=False):
+
     
-    meal_amount = False
-    water_intake = False
+    nowdict = dict()
 
+    pastdict = dict()
 
+    result = list()
+
+    Contrail = deque()
+    
+    ### 전체 데이터프레임
     test = pd.DataFrame()
 
     # fps 동영상에서 찾아서 불러오기
@@ -132,7 +154,7 @@ def detect(save_img=False):
             p = Path(p)  # to Path
             save_path = str(save_dir / p.name)  # img.jpg
             txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
-            # map_path = str(save_dir / (p.stem + '_minimap.mp4'))
+            # map_path = str(save_dir / p.stem) + '_minimap.mp4'
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
 
             canvas = np.zeros((720, 1280, 3), dtype="uint8") + 255
@@ -147,128 +169,129 @@ def detect(save_img=False):
                 ## Overlay
                 # for bbox in tracked_targets:
                 #     plot_one_box_tracked(bbox, im0)
+            
                 
+                ### 데이터, 미니맵, 바운딩 박스(트래커) 생성
+
+
+                Contrail.append(pastdict)
+
+                tails = Contrail.popleft()
+                rawdata = pd.DataFrame()
 
                 for num in range(len(tracked_targets)):
+                    
+
+                    travel_distance = 0
+
+                    xm, ym, xM, yM = tracked_targets[num].tlbr
+                    xc = xm + (xM - xm) / 2
+                    yc = ym + (yM - ym) / 2
+                    corrected_xc, corrected_yc = pm1.pixel_to_lonlat((xc, yc))[0]
+                    
+                    # nowdict[str(tracked_targets[num].track_id)] = [xc, yc]
+                    nowdict[str(tracked_targets[num].track_id)] = [corrected_xc, corrected_yc]
+
+                    if str(tracked_targets[num].track_id) in pastdict.keys():
+                        center = [x-y for x, y in zip(nowdict[str(tracked_targets[num].track_id)], pastdict[str(tracked_targets[num].track_id)])]
+
+                        travel_distance = math.sqrt(center[0] ** 2 + center[1] ** 2)
+
+                        if travel_distance <= 20:
+                            travel_distance = 0
+                        # else:
+                        #     print(int(travel_distance))
+                        
+
 
                     ### travel_distance
-                    tlbr = list(map(int, tracked_targets[num].tlbr))
-                    center = np.array([tlbr[0] + (tlbr[2] - tlbr[0]) // 2, tlbr[1] + (tlbr[3] - tlbr[1]) // 2])
-                    past_tlbr = test['tlbr'].iloc[-1]
-                    if past_tlbr:
-                        past_center = np.array([past_tlbr[0] + (past_tlbr[2] - past_tlbr[0]) // 2, past_tlbr[1] + (past_tlbr[3] - past_tlbr[1]) // 2])
-                        travel_distance = math.sqrt(list(center - past_center)[0] * list(center - past_center)[0] + list(center - past_center)[1] * list(center - past_center)[1])
-                    else:
-                        travel_distance = None
+                    # tlbr = list(map(int, tracked_targets[num].tlbr))
+                    # center = np.array([tlbr[0] + (tlbr[2] - tlbr[0]) // 2, tlbr[1] + (tlbr[3] - tlbr[1]) // 2])
+                    # past_tlbr = test['tlbr'].iloc[-1]
+                    # if past_tlbr:
+                    #     past_center = np.array([past_tlbr[0] + (past_tlbr[2] - past_tlbr[0]) // 2, past_tlbr[1] + (past_tlbr[3] - past_tlbr[1]) // 2])
+                    #     travel_distance = math.sqrt(list(center - past_center)[0] * list(center - past_center)[0] + list(center - past_center)[1] * list(center - past_center)[1])
+                    # else:
+                    #     travel_distance = 0
 
-                    if travel_distance == None:
-                        pass
-                    else:
-                        if travel_distance <= 50:
-                            travel_distance = 0
+                    # if travel_distance == 0:
+                    #     pass
+                    # else:
+                    #     if travel_distance <= 50:
+                    #         travel_distance = 0
+
+
+
+
 
                     ### meal_amount
-                    dot = Point(center)
+                    dot = Point(xc, yc)
                     if dot.within(mealarea_poly):
-                        meal_amount = True
+                        meal_amount = 1
                     else:
-                        meal_amount = False
+                        meal_amount = 0
 
 
                     ### water_amount
                     if dot.within(waterarea_poly):
-                        water_intake = True
+                        water_intake = 1
                     else:
-                        water_intake = False
-
-
+                        water_intake = 0
                     
-                    plot_one_box_tracked(tracked_targets[num], im0, canvas, color=colors[tracked_targets[num].track_id % len(colors)])
+
+
+                    realtime = datetime.now()
+
+                    ## 박스 및 미니맵 생성
+                    
+                    plot_one_box_tracked(tracked_targets[num], xc, yc, im0, canvas, colors[tracked_targets[num].track_id % len(colors)])
+
                     
                     data = [
-                        frame,
+                        int(frame),
                         tracked_targets[num].end_frame, 
-                        tracked_targets[num].frame_id, 
-                        list(tracked_targets[num].mean), 
-                        round(tracked_targets[num].score, 3), 
                         tracked_targets[num].start_frame, 
-                        tracked_targets[num].state, 
-                        list(map(int, tracked_targets[num].tlbr)), 
-                        list(map(int, tracked_targets[num].tlwh)), 
                         tracked_targets[num].track_id, 
-                        tracked_targets[num].tracklet_len, 
-                        tracked_targets[num]._count,
-                        len(tracked_targets),
-                        travel_distance,
+                        int(tracked_targets[num].tlbr[0]),
+                        int(tracked_targets[num].tlbr[1]),
+                        int(tracked_targets[num].tlbr[2]),
+                        int(tracked_targets[num].tlbr[3]),
+                        round(tracked_targets[num].score, 3), 
+                        int(travel_distance),
                         meal_amount,
                         water_intake,
+                        realtime
                         ]
 
                     columns = [
+                        'origin_frame',
                         'frame',
-                        'end_frame',
-                        'frame_id',
-                        'mean',
-                        'score',
                         'start_frame',
-                        'state',
-                        'tlbr',
-                        'tlwh',
                         'track_id',
-                        'tracklet_len',
-                        '_count',
-                        'len',
-                        'travel_distance',
-                        'meal_amount',
-                        'water_intake',
+                        'xmin',
+                        'ymin',
+                        'xmax',
+                        'ymax',
+                        'score',
+                        'distance',
+                        'meal',
+                        'water',
+                        'time'
                         ]
 
-                    df = pd.DataFrame([data], columns=columns).set_index('frame')
-                    test = pd.concat([test, df])
 
-                    # print(tracked_targets[num])
-            else:
-                data = [
-                        frame,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None
-                        ]
+                    df = pd.DataFrame([data], columns=columns).set_index('origin_frame')
+                    rawdata = pd.concat([rawdata, df])
 
-                columns = [
-                    'frame',
-                    'end_frame',
-                    'frame_id',
-                    'mean',
-                    'score',
-                    'start_frame',
-                    'state',
-                    'tlbr',
-                    'tlwh',
-                    'track_id',
-                    'tracklet_len',
-                    '_count',
-                    'len',
-                    'travel_distance',
-                    'meal_amount',
-                    'water_intake',
-                    ]
+                pastdict = dict()
 
-                df = pd.DataFrame([data], columns=columns).set_index('frame')
-                test = pd.concat([test, df])
+                pastdict = nowdict
+                
+                nowdict = dict()
 
+                test = pd.concat([test, rawdata])
+
+                result.append(canvas)
 
                 # # Print results
                 # for c in det[:, -1].unique():
@@ -288,6 +311,8 @@ def detect(save_img=False):
                     #     label = f'{names[int(cls)]} {conf:.2f}'
                     #     # 박스 치는 곳
                     #     plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=1)
+            else:
+                print('can not detect cow :', frame)
 
             # Print time (inference + NMS)
             print(f'{s}Done. ({(1E3 * (t2 - t1)):.1f}ms) Inference, ({(1E3 * (t3 - t2)):.1f}ms) NMS')
@@ -307,6 +332,7 @@ def detect(save_img=False):
                         vid_path = save_path
                         if isinstance(vid_writer, cv2.VideoWriter):
                             vid_writer.release()  # release previous video writer
+                            # map_writer.release()
                         if vid_cap:  # video
                             fps = vid_cap.get(cv2.CAP_PROP_FPS)
                             w = int(vid_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -321,12 +347,22 @@ def detect(save_img=False):
 
     if save_txt or save_img:
         s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if save_txt else ''
-        #print(f"Results saved to {save_dir}{s}")
+        print(f"Results saved to {save_dir}{s}")
 
     print(f'Done. ({time.time() - t0:.3f}s)')
 
+    ### 데이터 저장
+
     test.to_csv('p6_e6e_test' + '.csv', index = True)
-    
+
+    ### 미니맵 동영상 저장
+
+    out = cv2.VideoWriter('/home/ubuntu/yolov7/test.mp4', cv2.VideoWriter_fourcc(*'mp4v'),15, (1280, 720))
+
+    for i in range(len(result)):
+        out.write(result[i])
+        print('test :', i)
+    out.release()
 
 
 
@@ -372,5 +408,3 @@ if __name__ == '__main__':
                 strip_optimizer(opt.weights)
         else:
             detect()
-
-print('clear')
