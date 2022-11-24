@@ -88,21 +88,32 @@ def plot_one_box_tracked(x, xc, yc, img, minimap, color, label=None, line_thickn
     # cv2.destroyAllWindows()
 
 
+
+    ### c1 == tl, c2 == br
     c1, c2 = (int(x.tlbr[0]), int(x.tlbr[1])), (int(x.tlbr[2]), int(x.tlbr[3]))
 
+    ### xc, yc 를 미니맵 기준의 좌표로 변환해주는 코드
     corr1, corr2 = pm1.pixel_to_lonlat((xc, yc))[0]
     corr1 = int(corr1)
     corr2 = int(corr2)
+
+
+    ### 변환된 좌표로 미니맵에 Dot 찍는 코드
     cv2.line(minimap, (corr1, corr2), (corr1, corr2), color, 10)
+
 
     xc = int(xc)
     yc = int(yc)
 
-
-
+    ### 소 Center에 Dot 생성 코드
     cv2.line(img, (xc, yc), (xc, yc), color, 10)
+    ### Bbox 생성 코드
     cv2.rectangle(img, c1, c2, color, thickness=5, lineType=cv2.LINE_AA)
+    ### Cow 번호 생성 코드
     cv2.putText(img, str(x.track_id) , (((c1[0]+c2[0])//2), ((c1[1]+c2[1])//2)), cv2.FONT_HERSHEY_SIMPLEX, 3, color, 4)
+
+
+
 
     # if label:
     #     tf = max(tl - 1, 1)  # font thickness

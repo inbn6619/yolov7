@@ -1,5 +1,16 @@
 import os
 
+
+
+
+
+
+
+### 디텍팅 자동화 실패 스크립트 (csv가 저장이 안됨)
+
+
+
+
 # path = '/root/cow/yolov7/weights/'
 
 # weights_paths = os.listdir(path)
