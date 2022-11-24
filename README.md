@@ -1,6 +1,8 @@
 // EC2 env
 
 	sudo apt update -y
+	
+	sudo apt install python3-pip
 
 	git clone https://github.com/inbn6619/yolov7.git
 
@@ -65,6 +67,8 @@
 	sudo apt-get -y install libgl1-mesa-glx
 	or
 	sudo pip3 install opencv-python-headless
+	
+	sudo pip3 install -r requirements.txt
 
 
 
