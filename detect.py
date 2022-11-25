@@ -208,10 +208,8 @@ def detect(save_img=False):
                 tracked_targets = tracker.update(det[:, :5].cpu().numpy(), im0.shape)
 
             
-                ### Contrail 생성 중이던 코드
-                Contrail.append(pastdict)
-
-                tails = Contrail.popleft()
+                ### 프레임 전송 시간 코드
+                realtime = datetime.now()
 
                 ### 바운딩박스, 미니맵, DB 생성 코드
                 for num in range(len(tracked_targets)):
@@ -257,9 +255,6 @@ def detect(save_img=False):
                         water_intake = 0
                     
 
-                    ### 프레임 전송 시간 코드 // 각 프레임당 시간이 나오는 것이 아닌 프레임 내의 객체의 시간을 나타냄
-                    ### 프레임 당 시간으로 만들어 줄거라면 위의 for num in range(len(tracked_targets)): 위에 코드를 올려놓으면 될듯
-                    realtime = datetime.now()
 
                     ## 박스 및 미니맵 생성
                     
