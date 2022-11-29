@@ -69,7 +69,7 @@ def plot_one_box(x, img, color=None, label=None, line_thickness=3):
         cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)  # filled
         cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
 
-def plot_one_box_tracked(x, xc, yc, img, minimap, color, label=None, line_thickness=3):
+def plot_one_box_tracked(x, xc, yc, track_id, img, minimap, color, label=None, line_thickness=3):
     # Plots one bounding box on image img
     # tl = line_thickness
     # tl = line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1  # line/font thickness
@@ -110,7 +110,7 @@ def plot_one_box_tracked(x, xc, yc, img, minimap, color, label=None, line_thickn
     ### Bbox 생성 코드
     cv2.rectangle(img, c1, c2, color, thickness=5, lineType=cv2.LINE_AA)
     ### Cow 번호 생성 코드
-    cv2.putText(img, str(x.track_id) , (((c1[0]+c2[0])//2), ((c1[1]+c2[1])//2)), cv2.FONT_HERSHEY_SIMPLEX, 3, color, 4)
+    cv2.putText(img, str(track_id) , (c1[0],c1[1]), cv2.FONT_HERSHEY_SIMPLEX, 3, color, 4)
 
 
 

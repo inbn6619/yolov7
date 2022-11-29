@@ -23,7 +23,9 @@ from ByteTrack.yolox.tracker.byte_tracker import BYTETracker
 
 
 
-
+# cowpool
+from utils.cowpool import CowPool
+from utils.make_center import *
 
 # Distance 거리 계산(피타고라스 정리 사선 루트 적용시켜서 제곱값을 없에줌)
 
@@ -68,7 +70,10 @@ from datetime import datetime
 ## /home/ubuntu/yolov7/utils/VariableGroup.py
 
 
+# cowpool 
+from CowManager.CowManager import CowManager
 
+manager = CowManager(8)
 
 
 def detect(save_img=False):
@@ -77,7 +82,12 @@ def detect(save_img=False):
     
     out = cv2.VideoWriter('/home/ubuntu/yolov7/test.mp4', cv2.VideoWriter_fourcc(*'mp4v'),15, (1280, 720))
 
-    ### 함수 내 변수 (Dict, Contrail 은 DP로 바꾸어서 하는게 연산 속도가 더 빠를듯)
+
+    # 변수 모음
+    past_track_id_dict = dict()    
+
+    for i in range(1, 9):
+        past_track_id_dict[str(i)] = i
     
     nowdict = dict()
 
@@ -85,10 +95,14 @@ def detect(save_img=False):
 
     result = list()
 
-    Contrail = deque()
-    
     ### 전체 데이터프레임
     test = pd.DataFrame()
+
+    PFrame = pd.DataFrame()
+    
+    NFrame = pd.DataFrame()
+
+    
 
     # fps 동영상에서 찾아서 불러오기
     tracker = BYTETracker(opt, frame_rate=15)
@@ -207,34 +221,50 @@ def detect(save_img=False):
                 ## Tracker
                 tracked_targets = tracker.update(det[:, :5].cpu().numpy(), im0.shape)
 
-            
+
+                # 변수 모음
+                NFrame = pd.DataFrame()
+
+                cowidpool = set([1, 2, 3, 4, 5, 6, 7, 8])
+                setlist = set()
                 ### 프레임 전송 시간 코드
                 realtime = datetime.now()
 
-                ### 바운딩박스, 미니맵, DB 생성 코드
+
                 for num in range(len(tracked_targets)):
-                    
-                    ### Distance 생성 코드
-                    travel_distance = 0
 
+
+                    # track_id 1~8값으로 고정
+                    track_id = tracked_targets[num].track_id
+
+                    checklist = sorted(list(cowidpool - setlist))
+
+                    if str(track_id) not in past_track_id_dict.keys():
+                        past_track_id_dict[str(track_id)] = checklist[0]
+                    if past_track_id_dict[str(track_id)] in setlist:
+                        try:
+                            past_track_id_dict[str(track_id)] = checklist[0]
+                        except:
+                            print(len(tracked_targets))
+                    setlist.add(past_track_id_dict[str(track_id)])
+                    
+
+
+
+
+                    # 필요 변수
                     xm, ym, xM, yM = tracked_targets[num].tlbr
-                    xc = xm + (xM - xm) / 2
-                    yc = ym + (yM - ym) / 2
-                    corrected_xc, corrected_yc = pm1.pixel_to_lonlat((xc, yc))[0]
                     
-                    nowdict[str(tracked_targets[num].track_id)] = [corrected_xc, corrected_yc]
+                    xc, yc = make_center(tracked_targets[num].tlbr)
 
-                    ### Distance 전 프레임과 현재 프레임의 Track_id가 같은 것을 찾아주는 코드
-                    if str(tracked_targets[num].track_id) in pastdict.keys():
+                    nowdict[past_track_id_dict[str(track_id)]] = [xm, ym, xM, yM]
 
-                        ### 전프레임과 현프레임의 Center 값의 차이를 구해 Center의 이동거리(삼각형)을 구하고 제곱된 값을 Root를 씌워 Distance로 바꿔주는 코드
-                        center = [x-y for x, y in zip(nowdict[str(tracked_targets[num].track_id)], pastdict[str(tracked_targets[num].track_id)])]
 
-                        travel_distance = math.sqrt(center[0] ** 2 + center[1] ** 2)
-                        
-                        ### Distance 오차값 선정 코드
-                        if travel_distance <= 20:
-                            travel_distance = 0
+
+
+
+
+                    ### 데이터 컬럼 및 데이터 값으로 DataFrame 생성하여 DB 생성 코드
 
                     ### 식사량, 음수량은 Points in Polygon을 사용하여 해당 Dot이 Polygon(다각형)내에 있는지 판별 후
                     ### 있다면 1, 없다면 0의 값을 전송
@@ -254,23 +284,33 @@ def detect(save_img=False):
                     else:
                         water_intake = 0
                     
-
-
-                    ## 박스 및 미니맵 생성
                     
-                    plot_one_box_tracked(tracked_targets[num], xc, yc, im0, canvas, colors[tracked_targets[num].track_id % len(colors)])
+            
+                    # object pooling 생성 및 새로 추가 된 track_id 대조 하여 field에 옮기기
+                    if len(PFrame) == 0:
+                        manager.choiceCow(past_track_id_dict[str(track_id)], xc, yc)
+                        travel_distance = 0
+                    else:
+                        if past_track_id_dict[str(track_id)] not in list(PFrame['track_id']):
+                            # if manager.comparePool(track_id, xc, yc):
+                            manager.comparePool(past_track_id_dict[str(track_id)], xc, yc)
+                            # else:
+                            #     manager.choiceCow(track_id, xc, yc)
+                            travel_distance = 0
+                            
+                        else:
+                            manager.field_update(past_track_id_dict[str(track_id)], xc, yc)
 
-                    ### 데이터 컬럼 및 데이터 값으로 DataFrame 생성하여 DB 생성 코드
+                            travel_distance = find_distance(nowdict[past_track_id_dict[str(track_id)]], pastdict[past_track_id_dict[str(track_id)]])
+                    
+                    # object pooling Track_id로 field 인덱스 구하기
+                    idx = manager.find_idx(past_track_id_dict[str(track_id)])
+
                     data = [
                         int(frame),
                         tracked_targets[num].end_frame, 
                         tracked_targets[num].start_frame, 
-                        tracked_targets[num].track_id, 
-                        int(tracked_targets[num].tlbr[0]),
-                        int(tracked_targets[num].tlbr[1]),
-                        int(tracked_targets[num].tlbr[2]),
-                        int(tracked_targets[num].tlbr[3]),
-                        round(tracked_targets[num].score, 3), 
+                        past_track_id_dict[str(track_id)], 
                         int(travel_distance),
                         meal_amount,
                         water_intake,
@@ -282,11 +322,6 @@ def detect(save_img=False):
                         'frame',
                         'start_frame',
                         'track_id',
-                        'xmin',
-                        'ymin',
-                        'xmax',
-                        'ymax',
-                        'score',
                         'distance',
                         'meal',
                         'water',
@@ -294,10 +329,32 @@ def detect(save_img=False):
                         ]
 
 
+                    # 데이터 저장
                     df = pd.DataFrame([data], columns=columns).set_index('origin_frame')
-                    test = pd.concat([test, df])
+                    NFrame = pd.concat([NFrame, df])
 
-                ### Distance 값을 위해 현프레임의 좌표를 과거 프레임 변수에 옮기고 현프레임은 초기화 하는 코드
+
+                    # cv2 동영상 제작
+                    plot_one_box_tracked(tracked_targets[num], xc, yc, past_track_id_dict[str(track_id)], im0, canvas, colors[past_track_id_dict[str(track_id)] % len(colors)])
+                
+
+
+                # object pooling 없어진 Track_id
+                if len(PFrame) != 0:
+                    # newlist = list(set(NFrame['track_id']) - set(PFrame['track_id']))
+                    dislist = list(set(PFrame['track_id']) - set(NFrame['track_id']))
+                    if len(dislist) != 0:
+                        manager.fieldToPool(dislist)
+
+
+
+
+
+                PFrame = pd.DataFrame()
+
+                PFrame = NFrame
+
+
 
                 pastdict = dict()
 
@@ -306,10 +363,82 @@ def detect(save_img=False):
                 nowdict = dict()
 
 
-                ### 각 프레임당 CV2로 추가된 미니맵 이미지를 저장해주는 코드
-                result.append(canvas)
-                out.write(result[-1])
-                print('test : ', len(result))
+                test = pd.concat([test, NFrame])
+
+
+                # if len(PFrame) != 0:
+                #     pool = CowPool(NFrame, PFrame)
+
+                #     if len(PFrame) == len(NFrame):
+                #         if (np.array(PFrame['track_id']) == np.array(NFrame['track_id'])).all() == False:
+                #             pool.change_track_id(length=True)
+                #     else:
+                #         pool.change_track_id()
+
+
+                #     pool.add_distance()
+
+
+                # if len(PFrame) != 0:
+                #     if len(PFrame) == len(NFrame):
+                #         boolean_track_id = (np.array(NFrame['track_id']) == np.array(PFrame['track_id']))
+                #         if boolean_track_id.all():
+                #             pass
+                #         else:
+                #             ids = list()
+                #             lost_track_id = np.array(PFrame)[boolean_track_id]
+                #             for id in lost_track_id:
+                #                 ids.append(id[2])
+                #             manager.fieldToPool(ids)
+                #     else:
+                #         
+                #         if len(newlist) != 0:
+                #             manager.fieldToPool(newlist)
+
+
+
+
+                ### 바운딩박스, 미니맵, DB 생성 코드
+                # for num in range(len(tracked_targets)):
+
+                #     xm, ym, xM, yM = tracked_targets[num].tlbr
+                #     xc = xm + (xM - xm) / 2
+                #     yc = ym + (yM - ym) / 2
+
+                    # ### Distance 생성 코드
+                    # travel_distance = 0
+
+
+                    # corrected_xc, corrected_yc = pm1.pixel_to_lonlat((xc, yc))[0]
+                    
+                    # nowdict[str(tracked_targets[num].track_id)] = [corrected_xc, corrected_yc]
+
+                    # ### Distance 전 프레임과 현재 프레임의 Track_id가 같은 것을 찾아주는 코드
+                    # if str(tracked_targets[num].track_id) in pastdict.keys():
+
+                    #     ### 전프레임과 현프레임의 Center 값의 차이를 구해 Center의 이동거리(삼각형)을 구하고 제곱된 값을 Root를 씌워 Distance로 바꿔주는 코드
+                    #     center = [x-y for x, y in zip(nowdict[str(tracked_targets[num].track_id)], pastdict[str(tracked_targets[num].track_id)])]
+
+                    #     travel_distance = math.sqrt(center[0] ** 2 + center[1] ** 2)
+                        
+                    #     ### Distance 오차값 선정 코드
+                    #     if travel_distance <= 4:
+                    #         travel_distance = 0
+
+                    ## 박스 및 미니맵 생성
+                    
+                    # plot_one_box_tracked(tracked_targets[num], xc, yc, past_track_id_dict[str(tracked_targets[num].track_id)], im0, canvas, colors[past_track_id_dict[str(tracked_targets[num].track_id)] % len(colors)])
+
+
+                ### Distance 값을 위해 현프레임의 좌표를 과거 프레임 변수에 옮기고 현프레임은 초기화 하는 코드
+
+
+
+
+            ### 각 프레임당 CV2로 추가된 미니맵 이미지를 저장해주는 코드
+            result.append(canvas)
+            out.write(result[-1])
+            print('test : ', len(result))
 
 
 
@@ -350,7 +479,7 @@ def detect(save_img=False):
 
     ### 데이터 저장
 
-    test.to_csv('p6_e6e_test' + '.csv', index = True)
+    test.to_csv('test' + '.csv', index = True)
 
     
     ### release() == 선언된 변수에게 데이터 그만 보내라는 함수
@@ -364,8 +493,8 @@ def detect(save_img=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default='/home/ubuntu/yolov7/yolov7_p5_tiny_ver01.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='/home/ubuntu/yolov7/sample_ch3_not_rtsp.mp4', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--weights', nargs='+', type=str, default='/home/ubuntu/yolov7/yolov7_p6_e6e_ver01.pt', help='model.pt path(s)')
+    parser.add_argument('--source', type=str, default='/home/ubuntu/yolov7/test_sample_9min.mp4', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
