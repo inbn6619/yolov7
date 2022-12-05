@@ -79,3 +79,32 @@ minimap = np.array([
 ])
 
 pm1 = PixelMapper(area, minimap)
+
+
+# ch1 = np.array([
+#     [0, 660],
+#     [1819, 776],
+#     [1330, 200],
+#     [486, 162]
+# ])
+
+# ch1_mini = np.array([
+# 	[38,648],
+# 	[1280,648],
+# 	[1280,72],
+# 	[38,72]
+# ])
+
+
+
+
+
+# pm_1 = PixelMapper(ch1, ch1_mini)
+
+
+# print('test')
+# print('test')
+# print('test')
+# print('test')
+# print('test')
+# print('test')

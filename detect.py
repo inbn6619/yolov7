@@ -16,6 +16,7 @@ from utils.general import check_img_size, check_requirements, check_imshow, non_
 from utils.plots import plot_one_box, plot_one_box_tracked
 from utils.torch_utils import select_device, load_classifier, time_synchronized, TracedModel
 from ByteTrack.yolox.tracker.byte_tracker import BYTETracker
+from utils.Contrail import *
 
 
 
@@ -73,7 +74,7 @@ from datetime import datetime
 # cowpool 
 from CowManager.CowManager import CowManager
 
-manager = CowManager(8)
+manager = CowManager(20)
 
 
 def detect(save_img=False):
@@ -101,6 +102,8 @@ def detect(save_img=False):
     PFrame = pd.DataFrame()
     
     NFrame = pd.DataFrame()
+
+    contrail_dict = {}
 
     
 
@@ -291,7 +294,7 @@ def detect(save_img=False):
                         manager.choiceCow(past_track_id_dict[str(track_id)], xc, yc)
                         travel_distance = 0
                     else:
-                        if past_track_id_dict[str(track_id)] not in list(PFrame['track_id']):
+                        if past_track_id_dict[str(track_id)] not in list(PFrame['cow_id']):
                             # if manager.comparePool(track_id, xc, yc):
                             manager.comparePool(past_track_id_dict[str(track_id)], xc, yc)
                             # else:
@@ -306,35 +309,50 @@ def detect(save_img=False):
                     # object pooling Track_id로 field 인덱스 구하기
                     idx = manager.find_idx(past_track_id_dict[str(track_id)])
 
+                    mxc, myc = pm1.pixel_to_lonlat((xc, yc))[0]
+
                     data = [
-                        int(frame),
-                        tracked_targets[num].end_frame, 
-                        tracked_targets[num].start_frame, 
+                        frame,
                         past_track_id_dict[str(track_id)], 
+                        int(mxc),
+                        int(myc),
                         int(travel_distance),
                         meal_amount,
                         water_intake,
-                        realtime
                         ]
 
                     columns = [
-                        'origin_frame',
                         'frame',
-                        'start_frame',
-                        'track_id',
+                        'cow_id',
+                        'xc',
+                        'yc',
                         'distance',
                         'meal',
                         'water',
-                        'time'
                         ]
 
+                    # # num번째 소 track_id
+                    # num_track_id = tracked_targets[num].track_id
+
+                    # # track_id가 존재하는지 체크
+                    # if tracked_targets[num].track_id in contrail_dict.keys():
+                    #     # 중심좌표 추가
+                    #     contrail_dict[num_track_id].appendleft((int(xc), int(yc)))
+                    #     # contrail 그리기
+                    #     im0=tracking_tail(contrail_dict[num_track_id], im0, colors[past_track_id_dict[str(track_id)] % len(colors)])
+                    # else:
+                    #     contrail_dict[num_track_id] = deque(maxlen=45)
+                    #     contrail_dict[num_track_id].appendleft((int(xc), int(yc)))
 
                     # 데이터 저장
-                    df = pd.DataFrame([data], columns=columns).set_index('origin_frame')
+                    df = pd.DataFrame([data], columns=columns)
+                    # .set_index('origin_frame')
                     NFrame = pd.concat([NFrame, df])
 
 
                     # cv2 동영상 제작
+
+
                     plot_one_box_tracked(tracked_targets[num], xc, yc, past_track_id_dict[str(track_id)], im0, canvas, colors[past_track_id_dict[str(track_id)] % len(colors)])
                 
 
@@ -342,7 +360,7 @@ def detect(save_img=False):
                 # object pooling 없어진 Track_id
                 if len(PFrame) != 0:
                     # newlist = list(set(NFrame['track_id']) - set(PFrame['track_id']))
-                    dislist = list(set(PFrame['track_id']) - set(NFrame['track_id']))
+                    dislist = list(set(PFrame['cow_id']) - set(NFrame['cow_id']))
                     if len(dislist) != 0:
                         manager.fieldToPool(dislist)
 
