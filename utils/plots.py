@@ -97,9 +97,9 @@ def plot_one_box_tracked(x, xc, yc, meal_amount, water_intake, track_id, img, mi
     ### 소 Center에 Dot 생성 코드
     # cv2.line(img, (xc, yc), (xc, yc), color, 10)
     ### Bbox 생성 코드
-    cv2.rectangle(img, c1, c2, color, thickness=5, lineType=cv2.LINE_AA)
+    cv2.rectangle(img, c1, c2, color, thickness=20, lineType=cv2.LINE_AA)
     ### Cow 번호 생성 코드
-    cv2.putText(img, str(track_id) , (c1[0],c1[1]), cv2.FONT_HERSHEY_SIMPLEX, 3, color, 4)
+    cv2.putText(img, str(track_id) , (c1[0],c1[1]), cv2.FONT_HERSHEY_TRIPLEX, 3, color, 4)
 
 
 def plot_one_box_PIL(box, img, color=None, label=None, line_thickness=None):

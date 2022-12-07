@@ -41,8 +41,8 @@ def tracking_tail(xycenter, frame, color, meal_amount, water_intake):
             continue
         # otherwise, compute the thickness of the line and
         # draw the connecting lines
-        thickness = int(np.sqrt(args["buffer"] / float(i + 1)) * 2.5)
-        cv2.line(frame, xycenter[i - 1], xycenter[i], color, thickness + 3)
+        thickness = int(np.sqrt(args["buffer"] / float(i + 1)) * 10)
+        cv2.line(frame, xycenter[i - 1], xycenter[i], color, thickness)
         # cv2.imwrite("test_tracking_frame.png",frame)
     # show the frame to our screen
     # cv2.imshow("Frame", frame)
@@ -54,7 +54,7 @@ def tracking_tail(xycenter, frame, color, meal_amount, water_intake):
 
 def minimap_tail(xycenter, frame, color, meal_amount, water_intake):
     if meal_amount == 1:
-        color = (98, 232, 236)
+        color = (96, 232, 236)
 
     if water_intake == 1:
         color = (155, 95, 41)
@@ -74,8 +74,8 @@ def minimap_tail(xycenter, frame, color, meal_amount, water_intake):
             continue
         # otherwise, compute the thickness of the line and
         # draw the connecting lines
-        thickness = int(np.sqrt(args["buffer"] / float(i + 1)) * 2.5)
-        cv2.line(frame, result[i - 1], result[i], color, thickness + 3)
+        thickness = int(np.sqrt(args["buffer"] / float(i + 1)) * 6)
+        cv2.line(frame, result[i - 1], result[i], color, thickness)
         # cv2.imwrite("test_tracking_frame.png",frame)
     # show the frame to our screen
     # cv2.imshow("Frame", frame)

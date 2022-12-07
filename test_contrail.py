@@ -222,7 +222,7 @@ def detect(save_img=False):
 
             ### 미니맵 이미지 생성 코드
 
-            canvas = cv2.imread('/home/ubuntu/minimap_png.png')
+            canvas = cv2.imread('/home/ubuntu/minimap_png(미니맵용)ver02.png')
 
 
             ### 디텍션 했는지 파악해줌 // 아무것도 디텍팅 못했을 경우
@@ -522,8 +522,8 @@ def detect(save_img=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default='/home/ubuntu/yolov7/yolov7_p6_e6e_ver01.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='/home/ubuntu/yolov7/cowfarmB_ch3_2022072519_016.mp4', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--weights', nargs='+', type=str, default='/home/ubuntu/yolov7/yolov7_p5_tiny_ver01.pt', help='model.pt path(s)')
+    parser.add_argument('--source', type=str, default='/home/ubuntu/yolov7/sample_ch3_not_rtsp.mp4', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
