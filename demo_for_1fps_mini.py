@@ -76,6 +76,24 @@ from CowManager.CowManager import CowManager
 
 manager = CowManager(20)
 
+def make_minimap(check, xc, yc, past_xc, past_yc, minimap, color):
+
+    if check == True:  
+        color = (74, 183, 230)
+        ### xc, yc 를 미니맵 기준의 좌표로 변환해주는 코드
+    corr1, corr2 = pm1.pixel_to_lonlat((xc, yc))[0]
+    corr1 = int(corr1)
+    corr2 = int(corr2)
+
+        ### xc, yc 를 미니맵 기준의 좌표로 변환해주는 코드
+    past_corr1, past_corr2 = pm1.pixel_to_lonlat((past_xc, past_yc))[0]
+    past_corr1 = int(past_corr1)
+    past_corr2 = int(past_corr2)
+
+
+    ### 변환된 좌표로 미니맵에 Dot 찍는 코드
+    cv2.line(minimap, (corr1, corr2), (past_corr1, past_corr2), color, 10)
+
 
 def detect(save_img=False):
 
@@ -86,9 +104,12 @@ def detect(save_img=False):
     fps = 15
 
     minimap_size = (1280, 720)
-    
-    out_minimap = cv2.VideoWriter('/home/ubuntu/yolov7/minimap.mp4', fcc, fps, minimap_size)
 
+    resized_size = (640, 480)
+    
+    out_minimap = cv2.VideoWriter('/home/ubuntu/yolov7/test.mp4', fcc, fps, minimap_size)
+
+    out_resize = cv2.VideoWriter('/home/ubuntu/yolov7/resized.mp4', fcc, fps, resized_size)
 
 
     # 변수 모음
@@ -111,6 +132,9 @@ def detect(save_img=False):
     NFrame = pd.DataFrame()
 
     contrail_dict = {}
+
+    now_center = {}
+    past_center = {}
 
     
 
@@ -341,16 +365,18 @@ def detect(save_img=False):
                         'water',
                         ]
 
+                    # # num번째 소 track_id
+                    # num_track_id = tracked_targets[num].track_id
 
                     # # track_id가 존재하는지 체크
                     # if tracked_targets[num].track_id in contrail_dict.keys():
                     #     # 중심좌표 추가
-                    #     contrail_dict[track_id].appendleft((int(xc), int(yc)))
+                    #     contrail_dict[num_track_id].appendleft((int(xc), int(yc)))
                     #     # contrail 그리기
-                    #     im0=tracking_tail(contrail_dict[track_id], im0, colors[past_track_id_dict[str(track_id)] % len(colors)])
+                    #     im0=tracking_tail(contrail_dict[num_track_id], im0, colors[past_track_id_dict[str(track_id)] % len(colors)])
                     # else:
-                    #     contrail_dict[track_id] = deque(maxlen=45)
-                    #     contrail_dict[track_id].appendleft((int(xc), int(yc)))
+                    #     contrail_dict[num_track_id] = deque(maxlen=45)
+                    #     contrail_dict[num_track_id].appendleft((int(xc), int(yc)))
 
                     # 데이터 저장
                     df = pd.DataFrame([data], columns=columns)
@@ -359,10 +385,24 @@ def detect(save_img=False):
 
 
                     # cv2 동영상 제작
+                    # plot_one_box_tracked(tracked_targets[num], xc, yc, Check,past_track_id_dict[str(track_id)], im0, canvas, colors[past_track_id_dict[str(track_id)] % len(colors)], Check)
 
+                    if str(track_id) not in past_center.keys():
+                        past_center[past_track_id_dict[str(track_id)]] = [xc, yc]
 
-                    plot_one_box_tracked(tracked_targets[num], xc, yc, Check,past_track_id_dict[str(track_id)], im0, canvas, colors[past_track_id_dict[str(track_id)] % len(colors)], Check)
                 
+                    if frame % 15 != 0:
+                        make_minimap(Check, past_center[past_track_id_dict[str(track_id)]][0], past_center[past_track_id_dict[str(track_id)]][1], past_center[past_track_id_dict[str(track_id)]][0], past_center[past_track_id_dict[str(track_id)]][1], canvas, colors[past_track_id_dict[str(track_id)] % len(colors)])
+                    else:
+                        if str(track_id) not in pastdict.keys():
+                            make_minimap(Check, xc, yc, xc, yc, canvas, colors[past_track_id_dict[str(track_id)] % len(colors)])
+                            past_center[past_track_id_dict[str(track_id)]] = [xc, yc]
+                        else:
+                            make_minimap(Check, xc, yc, past_center[past_track_id_dict[str(track_id)]][0], past_center[past_track_id_dict[str(track_id)]][1], canvas, colors[past_track_id_dict[str(track_id)] % len(colors)])
+
+                            past_center[past_track_id_dict[str(track_id)]] = [xc, yc]
+
+
 
 
                 # object pooling 없어진 Track_id
@@ -464,6 +504,10 @@ def detect(save_img=False):
             ### 각 프레임당 CV2로 추가된 미니맵 이미지를 저장해주는 코드
             # result.append(canvas)
             out_minimap.write(canvas)
+
+            resized = cv2.resize(im0, resized_size, interpolation=cv2.INTER_AREA)
+
+            out_resize.write(resized)
             # print('test : ', len(result))
 
 
@@ -505,7 +549,7 @@ def detect(save_img=False):
 
     ### 데이터 저장
 
-    test.to_csv('data' + '.csv', index = True)
+    test.to_csv('data_demo' + '.csv', index = True)
 
     
     ### release() == 선언된 변수에게 데이터 그만 보내라는 함수

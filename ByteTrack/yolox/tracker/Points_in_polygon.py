@@ -18,7 +18,7 @@ poly = Polygon(area)
 
 mealarea = [(61, 816), (22, 690), (908, 739), (913, 897)]
 
-waterarea = [(493, 277), (485, 223), (1386, 225), (1384, 277)]
+waterarea = [(472, 347), (1394, 347), (1394, 214), (472, 214)]
 
 mealarea_poly = Polygon(mealarea)
 

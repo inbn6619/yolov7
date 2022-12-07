@@ -56,7 +56,7 @@ def butter_lowpass_filtfilt(data, cutoff=1500, fs=50000, order=5):
     return filtfilt(b, a, data)  # forward-backward filter
 
 
-def plot_one_box(x, img, color=None, label=None, line_thickness=3):
+def plot_one_box(result, x, img, color=None, label=None, line_thickness=3):
     # Plots one bounding box on image img
     tl = line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1  # line/font thickness
     color = color or [random.randint(0, 255) for _ in range(3)]
@@ -69,27 +69,33 @@ def plot_one_box(x, img, color=None, label=None, line_thickness=3):
         cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)  # filled
         cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
 
-def plot_one_box_tracked(x, xc, yc, track_id, img, minimap, color, label=None, line_thickness=3):
+def plot_one_box_tracked(x, xc, yc, meal_amount, water_intake, track_id, img, minimap, color, label=None, line_thickness=3):
+
+    if meal_amount == 1:
+        color = (98, 232, 236)
+
+    if water_intake == 1:
+        color = (155, 95, 41)
 
 
     ### c1 == tl, c2 == br
     c1, c2 = (int(x.tlbr[0]), int(x.tlbr[1])), (int(x.tlbr[2]), int(x.tlbr[3]))
 
-    ### xc, yc 를 미니맵 기준의 좌표로 변환해주는 코드
-    corr1, corr2 = pm1.pixel_to_lonlat((xc, yc))[0]
-    corr1 = int(corr1)
-    corr2 = int(corr2)
+    # ### xc, yc 를 미니맵 기준의 좌표로 변환해주는 코드
+    # corr1, corr2 = pm1.pixel_to_lonlat((xc, yc))[0]
+    # corr1 = int(corr1)
+    # corr2 = int(corr2)
 
 
-    ### 변환된 좌표로 미니맵에 Dot 찍는 코드
-    cv2.line(minimap, (corr1, corr2), (corr1, corr2), color, 10)
+    # ### 변환된 좌표로 미니맵에 Dot 찍는 코드
+    # cv2.line(minimap, (corr1, corr2), (corr1, corr2), color, 10)
 
 
     xc = int(xc)
     yc = int(yc)
 
     ### 소 Center에 Dot 생성 코드
-    cv2.line(img, (xc, yc), (xc, yc), color, 10)
+    # cv2.line(img, (xc, yc), (xc, yc), color, 10)
     ### Bbox 생성 코드
     cv2.rectangle(img, c1, c2, color, thickness=5, lineType=cv2.LINE_AA)
     ### Cow 번호 생성 코드

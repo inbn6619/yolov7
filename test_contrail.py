@@ -86,8 +86,10 @@ def detect(save_img=False):
     fps = 15
 
     minimap_size = (1280, 720)
+
+    resized_mini_size = (640, 480)
     
-    out_minimap = cv2.VideoWriter('/home/ubuntu/yolov7/minimap.mp4', fcc, fps, minimap_size)
+    out_minimap = cv2.VideoWriter('/home/ubuntu/yolov7/minimap.mp4', fcc, fps, resized_mini_size)
 
 
 
@@ -220,7 +222,7 @@ def detect(save_img=False):
 
             ### 미니맵 이미지 생성 코드
 
-            canvas = np.zeros((720, 1280, 3), dtype="uint8") + 255
+            canvas = cv2.imread('/home/ubuntu/minimap_png.png')
 
 
             ### 디텍션 했는지 파악해줌 // 아무것도 디텍팅 못했을 경우
@@ -271,9 +273,6 @@ def detect(save_img=False):
 
 
 
-                    Check = False
-
-
 
                     ### 데이터 컬럼 및 데이터 값으로 DataFrame 생성하여 DB 생성 코드
 
@@ -285,7 +284,6 @@ def detect(save_img=False):
                     dot = Point(xc, yc)
                     if dot.within(mealarea_poly):
                         meal_amount = 1
-                        Check = True
                     else:
                         meal_amount = 0
 
@@ -293,7 +291,6 @@ def detect(save_img=False):
                     ### water_amount
                     if dot.within(waterarea_poly):
                         water_intake = 1
-                        Check = True
                     else:
                         water_intake = 0
                     
@@ -342,15 +339,20 @@ def detect(save_img=False):
                         ]
 
 
-                    # # track_id가 존재하는지 체크
-                    # if tracked_targets[num].track_id in contrail_dict.keys():
-                    #     # 중심좌표 추가
-                    #     contrail_dict[track_id].appendleft((int(xc), int(yc)))
-                    #     # contrail 그리기
-                    #     im0=tracking_tail(contrail_dict[track_id], im0, colors[past_track_id_dict[str(track_id)] % len(colors)])
-                    # else:
-                    #     contrail_dict[track_id] = deque(maxlen=45)
-                    #     contrail_dict[track_id].appendleft((int(xc), int(yc)))
+                    # track_id가 존재하는지 체크
+                    if tracked_targets[num].track_id in contrail_dict.keys():
+                        # 중심좌표 추가
+                        contrail_dict[track_id].appendleft((int(xc), int(yc)))
+
+
+                        # contrail 그리기
+                        im0=tracking_tail(contrail_dict[track_id], im0, colors[past_track_id_dict[str(track_id)] % len(colors)], meal_amount, water_intake)
+
+
+                        canvas = minimap_tail(contrail_dict[track_id], canvas, colors[past_track_id_dict[str(track_id)] % len(colors)], meal_amount, water_intake)
+                    else:
+                        contrail_dict[track_id] = deque(maxlen=45)
+                        contrail_dict[track_id].appendleft((int(xc), int(yc)))
 
                     # 데이터 저장
                     df = pd.DataFrame([data], columns=columns)
@@ -361,7 +363,7 @@ def detect(save_img=False):
                     # cv2 동영상 제작
 
 
-                    plot_one_box_tracked(tracked_targets[num], xc, yc, Check,past_track_id_dict[str(track_id)], im0, canvas, colors[past_track_id_dict[str(track_id)] % len(colors)], Check)
+                    plot_one_box_tracked(tracked_targets[num], xc, yc, meal_amount, water_intake,past_track_id_dict[str(track_id)], im0, canvas, colors[past_track_id_dict[str(track_id)] % len(colors)])
                 
 
 
@@ -463,6 +465,7 @@ def detect(save_img=False):
 
             ### 각 프레임당 CV2로 추가된 미니맵 이미지를 저장해주는 코드
             # result.append(canvas)
+            canvas = cv2.resize(canvas, resized_mini_size, interpolation=cv2.INTER_AREA)
             out_minimap.write(canvas)
             # print('test : ', len(result))
 
@@ -519,8 +522,8 @@ def detect(save_img=False):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--weights', nargs='+', type=str, default='/home/ubuntu/yolov7/yolov7_p5_tiny_ver01.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='/home/ubuntu/yolov7/sample_ch3_not_rtsp.mp4', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--weights', nargs='+', type=str, default='/home/ubuntu/yolov7/yolov7_p6_e6e_ver01.pt', help='model.pt path(s)')
+    parser.add_argument('--source', type=str, default='/home/ubuntu/yolov7/cowfarmB_ch3_2022072519_016.mp4', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')

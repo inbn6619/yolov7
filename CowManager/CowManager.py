@@ -55,7 +55,6 @@ class CowManager():
 
     # 풀에서 비교할것
     def comparePool(self, track_id, x, y):
-        check = True
         # 잠깐 비교를 위해 담아둠
         answer = []
         # 한바퀴 돌면서 찾음
@@ -74,10 +73,6 @@ class CowManager():
             findcow.setTrack_id(track_id)
             self.field.append(findcow)
             print("남은 POOL : ", len(self.pool))
-        else:
-            check = False
-
-        return check
 
     
     def find_idx(self, track_id):
