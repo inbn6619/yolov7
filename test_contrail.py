@@ -92,7 +92,6 @@ def detect(save_img=False):
     out_minimap = cv2.VideoWriter('/home/ubuntu/yolov7/minimap.mp4', fcc, fps, resized_mini_size)
 
 
-
     # 변수 모음
     past_track_id_dict = dict()    
 
@@ -497,7 +496,10 @@ def detect(save_img=False):
                         else:  # stream
                             fps, w, h = 30, im0.shape[1], im0.shape[0]
                             save_path += '.mp4'
-                        vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+                        vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, resized_mini_size)
+                        # vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
+
+                    im0 = cv2.resize(im0, resized_mini_size, interpolation=cv2.INTER_AREA)
                     vid_writer.write(im0)
 
     if save_txt or save_img:
