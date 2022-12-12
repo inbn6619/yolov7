@@ -303,6 +303,23 @@ def detect(save_img=False):
                     
                     
             
+                    # object pooling 생성 및 새로 추가 된 track_id 대조 하여 field에 옮기기
+                    if len(PFrame) == 0:
+                        manager.choiceCow(str(track_id), xc, yc)
+                        travel_distance = 0
+                    else:
+                        if str(track_id) not in list(PFrame['cow_id']):
+                            # if manager.comparePool(str(track_id), xc, yc):
+                            manager.comparePool(str(track_id), xc, yc)
+                            # else:
+                            #     manager.choiceCow(str(track_id), xc, yc)
+                            travel_distance = 0
+                            
+                        else:
+                            manager.field_update(str(track_id), xc, yc)
+
+                            travel_distance = find_distance(nowdict[str(track_id)], pastdict[str(track_id)])
+            
                     # # object pooling 생성 및 새로 추가 된 track_id 대조 하여 field에 옮기기
                     # if len(PFrame) == 0:
                     #     manager.choiceCow(past_track_id_dict[str(track_id)], xc, yc)
@@ -320,7 +337,7 @@ def detect(save_img=False):
 
                     #         travel_distance = find_distance(nowdict[past_track_id_dict[str(track_id)]], pastdict[past_track_id_dict[str(track_id)]])
 
-                    travel_distance = 0
+                    # travel_distance = 0
                     
                     # object pooling Track_id로 field 인덱스 구하기
                     # idx = manager.find_idx(past_track_id_dict[str(track_id)])
@@ -383,12 +400,12 @@ def detect(save_img=False):
                 
 
 
-                # # object pooling 없어진 Track_id
-                # if len(PFrame) != 0:
-                #     # newlist = list(set(NFrame['track_id']) - set(PFrame['track_id']))
-                #     dislist = list(set(PFrame['cow_id']) - set(NFrame['cow_id']))
-                #     if len(dislist) != 0:
-                #         manager.fieldToPool(dislist)
+                # object pooling 없어진 Track_id
+                if len(PFrame) != 0:
+                    # newlist = list(set(NFrame['track_id']) - set(PFrame['track_id']))
+                    dislist = list(set(PFrame['cow_id']) - set(NFrame['cow_id']))
+                    if len(dislist) != 0:
+                        manager.fieldToPool(dislist)
 
 
 

@@ -191,8 +191,10 @@ class BYTETracker(object):
 
 
         ### Points in Polygon으로 판단 한 결과 값을 기준으로 디텍션 한 결과를 제한하는 코드
-        dets = checkpoint[limited_area(checkpoint, poly)]
-
+        if len(checkpoint) != 0:
+            dets = checkpoint[limited_area(checkpoint, poly)]
+        else:
+            dets = checkpoint
 
         scores_keep = scores[remain_inds]
         scores_second = scores[inds_second]
